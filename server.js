@@ -15,6 +15,9 @@ var slapp = Slapp({
   context: Context()
 })
 
+//*********************************************
+// Example functions
+//*********************************************
 
 var HELP_TEXT = `
 I will respond to the following messages:
@@ -25,17 +28,9 @@ I will respond to the following messages:
 \`attachment\` - to see a Slack attachment message.
 `
 
-//*********************************************
-// Setup different handlers for messages
-//*********************************************
-
 // response to the user typing "help"
 slapp.message('help', ['mention', 'direct_message'], (msg) => {
   msg.say(HELP_TEXT)
-})
-
-slapp.message('hoopy', ['mention', 'direct_message'], (msg) => {
-  msg.say("What's up, Señor Hoopy!")
 })
 
 // "Conversation" flow that tracks state - kicks off when user says hi, hello or hey
@@ -116,6 +111,26 @@ slapp.message('.*', ['direct_mention', 'direct_message'], (msg) => {
     msg.say([':wave:', ':pray:', ':raised_hands:'])
   }
 })
+
+//*********************************************
+// Grocery-Bot
+//*********************************************
+
+slapp.message('hoopy', ['mention', 'direct_message'], (msg) => {
+  msg.say("What's up, Señor Hoopy! I'm your personal bot.")
+})
+
+slapp.command('/grocery', (msg, text) => {
+  if (!text) {
+    msg.respond("Whoops. Try again.")
+  } else {
+    msg.respond("Alright! We've added it to the list.")
+  }
+})
+
+//*********************************************
+// Server
+//*********************************************
 
 // attach Slapp to express server
 var server = slapp.attachToExpress(express())
