@@ -1,18 +1,84 @@
 'use strict'
 
 const express = require('express')
+const sqlite = require('sqlite3').verbose()
+const db = new sqlite.Database('./data/database.sqlite')
+const Promise = require('bluebird')
 const Slapp = require('slapp')
 const ConvoStore = require('slapp-convo-beepboop')
 const Context = require('slapp-context-beepboop')
 
-// use `PORT` env var on Beep Boop - default to 3000 locally
-var port = process.env.PORT || 3000
+const app = express()
+const port = process.env.PORT || 3000
 
 var slapp = Slapp({
   // Beep Boop sets the SLACK_VERIFY_TOKEN env var
   verify_token: process.env.SLACK_VERIFY_TOKEN,
   convo_store: ConvoStore(),
   context: Context()
+})
+
+//*********************************************
+// Grocery-Bot
+//*********************************************
+
+slapp.command('/grocery', (msg, text) => {
+  if (!text) {
+    msg.respond("Whoops. Try again.")
+  } else {
+    msg.respond("Alright! We've added it to the list.")
+  }
+})
+
+function fetchList() {
+  return new Promise(function(resolve, reject) {
+    db.serialize(function() {
+      db.all("SELECT * FROM Groceries", function(err, rows) {
+        if (err) {
+          var responseObj = {
+            'error': err
+          }
+          reject(responseObj)
+          db.close()
+        } else {
+          var responseObj = {
+            'groceries': rows
+          }
+          resolve(responseObj)
+          db.close()
+        }
+      })
+    })
+  })
+}
+
+slapp.command('/list', (msg) => {
+  try {
+    let groceries = null
+    let groceries_text = ``
+
+    fetchList()
+      .then((response) => {
+        if(response.error) {
+          console.log(response.error)
+        } else {
+          groceries = response.groceries
+          for(var i=0; i<groceries.length; i++) {
+            console.log(groceries[i])
+            if(i==0) {
+              groceries_text = `:point_down: *Here's the grocery list:*`
+            }
+            groceries_text += `
+*#` + groceries[i].id + `* - ` + groceries[i].name
+          }
+          msg.respond(groceries_text)
+        }
+      })
+
+    // msg.say(groceries_pretext)
+  } catch (err) {
+    next(err)
+  }
 })
 
 //*********************************************
@@ -109,22 +175,6 @@ slapp.message('.*', ['direct_mention', 'direct_message'], (msg) => {
   // respond only 40% of the time
   if (Math.random() < 0.4) {
     msg.say([':wave:', ':pray:', ':raised_hands:'])
-  }
-})
-
-//*********************************************
-// Grocery-Bot
-//*********************************************
-
-slapp.message('hoopy', ['mention', 'direct_message'], (msg) => {
-  msg.say("What's up, Señor Hoopy! I'm your personal bot.")
-})
-
-slapp.command('/grocery', (msg, text) => {
-  if (!text) {
-    msg.respond("Whoops. Try again.")
-  } else {
-    msg.respond("Alright! We've added it to the list.")
   }
 })
 
