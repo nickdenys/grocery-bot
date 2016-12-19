@@ -23,7 +23,7 @@ var slapp = Slapp({
 //*********************************************
 
 function fetchList() {
-  return new Promise(function(resolve, reject) {
+  return new Promise((resolve, reject) => {
     db = new sqlite.Database('./data/database.sqlite')
     db.serialize(() => {
       db.all("SELECT * FROM Groceries", function(err, rows) {
@@ -46,11 +46,61 @@ function fetchList() {
 }
 
 function addToList(text) {
-  return new Promise(function(resolve, reject) {
+  return new Promise((resolve, reject) => {
     db = new sqlite.Database('./data/database.sqlite')
     db.serialize(() => {
-      var stmt = db.prepare("INSERT INTO Groceries (name) VALUES (?)")
+      let stmt = db.prepare("INSERT INTO Groceries (name) VALUES (?)")
       stmt.run(text, function(err) {
+        if (err) {
+          console.log(err)
+          let responseObj = {
+            'error': err
+          }
+          reject(responseObj)
+        } else {
+          let responseObj = {
+            'item': this
+          }
+          resolve(responseObj)
+        }
+      })
+      stmt.finalize()
+    })
+    db.close()
+  })
+}
+
+function deleteFromList(id) {
+  return new Promise((resolve, reject) => {
+    db = new sqlite.Database('./data/database.sqlite')
+    db.serialize(() => {
+      let stmt = db.prepare("DELETE FROM Groceries WHERE id=(?)")
+      stmt.run(id, function(err) {
+        if (err) {
+          console.log(err)
+          let responseObj = {
+            'error': err
+          }
+          reject(responseObj)
+        } else {
+          let responseObj = {
+            'item': this
+          }
+          resolve(responseObj)
+        }
+      })
+      stmt.finalize()
+    })
+    db.close()
+  })
+}
+
+function updateItem(id, val) {
+  return new Promise((resolve, reject) => {
+    db = new sqlite.Database('./data/database.sqlite')
+    db.serialize(() => {
+      let stmt = db.prepare("UPDATE Groceries SET name = (?) WHERE id = (?)")
+      stmt.run(val, id, function(err) {
         if (err) {
           console.log(err)
           let responseObj = {
@@ -80,32 +130,11 @@ slapp.command('/grocery', 'help', (msg) => {
   \`help\` - to see this message.
   \`list\` - to see all items on the grocery list.
   \`add [item]\` - to add an item to the list.
+  \`edit [id] new [item]\` - to edit an item on the list.
   \`remove [id]\` - to remove an item from the list.
   \`clear\` - to remove all items from the list and start from scratch.
   `
   msg.say(HELP_TEXT)
-})
-
-slapp.command('/grocery', 'add (.*)', (msg, text, item) => {
-  if (!text) {
-    msg.respond("Whoops. Try again.")
-  } else {
-    try {
-      addToList(item)
-        .then((response) => {
-          if(response.error) {
-            console.log(response.error)
-            msg.respond("Something went wrong. We couldn't add that to the list :scream:")
-          } else {
-            console.log(response.item)
-            msg.respond("Alright! We've added it to the list.")
-          }
-        })
-    } catch (err) {
-      msg.respond("Something went wrong. We couldn't add that to the list :sweat:")
-      next(err)
-    }
-  }
 })
 
 slapp.command('/grocery', 'list', (msg) => {
@@ -123,7 +152,7 @@ slapp.command('/grocery', 'list', (msg) => {
           for(var i=0; i<groceries.length; i++) {
             console.log(groceries[i])
             if(i==0) {
-              groceries_text = `:point_down: *Here's the grocery list:*`
+              groceries_text = `:memo: *Here's the grocery list:*`
             }
             groceries_text += `
 *#` + groceries[i].id + `* - ` + groceries[i].name
@@ -134,6 +163,78 @@ slapp.command('/grocery', 'list', (msg) => {
   } catch (err) {
     msg.respond("Something went wrong. We can't seem to find your list :anguished:")
     next(err)
+  }
+})
+
+slapp.command('/grocery', 'add (.*)', (msg, text, item) => {
+  if (!text) {
+    msg.respond("Whoops. Try again.")
+  } else {
+    try {
+      addToList(item)
+        .then((response) => {
+          if(response.error) {
+            console.log(response.error)
+            msg.respond("Something went wrong. We couldn't add that to the list :scream:")
+          } else {
+            console.log(response.item)
+            msg.respond(":heavy_check_mark: Alright! We've added it to the list.")
+          }
+        })
+    } catch (err) {
+      msg.respond("Something went wrong. We couldn't add that to the list :sweat:")
+      next(err)
+    }
+  }
+})
+
+slapp.command('/grocery', 'remove (.*)', (msg, text, id) => {
+  if (!text) {
+    msg.respond("Whoops. Try again.")
+  } else {
+    try {
+      deleteFromList(id)
+        .then((response) => {
+          if(response.error) {
+            console.log(response.error)
+            msg.respond("Something went wrong. We couldn't remove that item from the list :triumph:")
+          } else {
+            console.log(response.item)
+            msg.respond(":x: Done! We've removed it from the list.")
+          }
+        })
+    } catch (err) {
+      msg.respond("Something went wrong. We couldn't remove that item from the list :triumph:")
+    }
+  }
+})
+
+slapp.command('/grocery', 'edit (.*)', (msg, text, details) => {
+  if (!text) {
+    msg.respond("Whoops. Try again.")
+  } else {
+    // Extract ID and the new text
+    let vars = details.split("new")
+    for (var i=0;i<vars.length; i++) {
+      vars[i] = vars[i].trim()
+    }
+    let id = vars[0]
+    let newText = vars[1]
+
+    try {
+      updateItem(id, newText)
+        .then((response) => {
+          if(response.error) {
+            console.log(response.error)
+            msg.respond("Something went wrong. We couldn't edit that item :triumph:")
+          } else {
+            console.log(response.item)
+            msg.respond(":floppy_disk: Saved! The item has been edited.")
+          }
+        })
+    } catch (err) {
+      msg.respond("Something went wrong. We couldn't edit that item :triumph:")
+    }
   }
 })
 
