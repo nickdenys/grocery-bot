@@ -120,6 +120,56 @@ function updateItem(id, val) {
   })
 }
 
+function clearList() {
+  return new Promise((resolve, reject) => {
+    db = new sqlite.Database('./data/database.sqlite')
+    db.serialize(() => {
+      let stmt = db.prepare("DROP TABLE IF EXISTS Groceries")
+      stmt.run(function(err) {
+        if (err) {
+          console.log(err)
+          let responseObj = {
+            'error': err
+          }
+          reject(responseObj)
+        } else {
+          let responseObj = {
+            'response': this
+          }
+          resolve(responseObj)
+        }
+      })
+      stmt.finalize()
+    })
+    db.close()
+  })
+}
+
+function createList() {
+  return new Promise((resolve, reject) => {
+    db = new sqlite.Database('./data/database.sqlite')
+    db.serialize(() => {
+      let stmt = db.prepare("CREATE TABLE `Groceries` ( `id` INTEGER PRIMARY KEY AUTOINCREMENT UNIQUE, `name` TEXT );")
+      stmt.run(function(err) {
+        if (err) {
+          console.log(err)
+          let responseObj = {
+            'error': err
+          }
+          reject(responseObj)
+        } else {
+          let responseObj = {
+            'response': this
+          }
+          resolve(responseObj)
+        }
+      })
+      stmt.finalize()
+    })
+    db.close()
+  })
+}
+
 //*********************************************
 // Commands
 //*********************************************
@@ -234,6 +284,35 @@ slapp.command('/grocery', 'edit (.*)', (msg, text, details) => {
         })
     } catch (err) {
       msg.respond("Something went wrong. We couldn't edit that item :triumph:")
+    }
+  }
+})
+
+slapp.command('/grocery', 'clear', (msg, text) => {
+  if (!text) {
+    msg.respond("Whoops. Try again.")
+  } else {
+    try {
+      clearList()
+        .then((response) => {
+          if(response.error) {
+            console.log(response.error)
+            msg.respond("Something went wrong. We couldn't clear the grocery list :triumph:")
+          } else {
+            console.log(response)
+            createList()
+              .then((response) => {
+                if(response.error) {
+                  console.log(response.error)
+                  msg.respond("Something went wrong. We couldn't create a new grocery list :triumph:")
+                } else {
+                  msg.respond(":zap: Clear! Everything has been removed from the list.")
+                }
+              })
+          }
+        })
+    } catch (err) {
+      msg.respond("Something went wrong. We couldn't clear the grocery list :triumph:")
     }
   }
 })
