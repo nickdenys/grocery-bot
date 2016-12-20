@@ -242,20 +242,19 @@ slapp.command('/grocery', 'remove (.*)', (msg, text, id) => {
   if (!text) {
     msg.respond("Whoops. Try again.")
   } else {
-    try {
-      deleteFromList(id)
-        .then((response) => {
-          if(response.error) {
-            console.log(response.error)
-            msg.respond("Something went wrong. We couldn't remove that item from the list :triumph:")
-          } else {
-            console.log(response.item)
-            msg.respond(":x: Done! We've removed it from the list.")
-          }
-        })
-    } catch (err) {
-      msg.respond("Something went wrong. We couldn't remove that item from the list :triumph:")
-    }
+    msg.respond({
+      text: '',
+      attachments: [
+        {
+          text: 'Are you sure? This will remove the item from the list.',
+          fallback: 'Delete or Cancel?',
+          callback_id: 'delete_item_callback',
+          actions: [
+            { name: 'answer', text: 'Delete', type: 'button', value: id },
+            { name: 'answer', text: 'Cancel',  type: 'button',  value: 'cancel' }
+          ]
+        }]
+      })
   }
 })
 
@@ -292,6 +291,49 @@ slapp.command('/grocery', 'clear', (msg, text) => {
   if (!text) {
     msg.respond("Whoops. Try again.")
   } else {
+    msg.respond({
+      text: '',
+      attachments: [
+        {
+          text: 'Are you sure? This will delete all items on your list.',
+          fallback: 'Delete or Cancel?',
+          callback_id: 'clear_list_callback',
+          actions: [
+            { name: 'answer', text: 'Delete', type: 'button', value: 'delete' },
+            { name: 'answer', text: 'Cancel',  type: 'button',  value: 'cancel' }
+          ]
+        }]
+      })
+  }
+})
+
+//*********************************************
+// Actions
+//*********************************************
+
+slapp.action('delete_item_callback', 'answer', (msg, value) => {
+  if (value != 'cancel') {
+    try {
+      deleteFromList(value)
+        .then((response) => {
+          if(response.error) {
+            console.log(response.error)
+            msg.respond("Something went wrong. We couldn't remove that item from the list :triumph:")
+          } else {
+            console.log(response.item)
+            msg.respond(":x: Done! We've removed it from the list.")
+          }
+        })
+    } catch (err) {
+      msg.respond("Something went wrong. We couldn't remove that item from the list :triumph:")
+    }
+  } else {
+    msg.respond('Okay, we won\'t delete that item. Relax! :relaxed:')
+  }
+})
+
+slapp.action('clear_list_callback', 'answer', (msg, value) => {
+  if (value == 'delete') {
     try {
       clearList()
         .then((response) => {
@@ -306,7 +348,7 @@ slapp.command('/grocery', 'clear', (msg, text) => {
                   console.log(response.error)
                   msg.respond("Something went wrong. We couldn't create a new grocery list :triumph:")
                 } else {
-                  msg.respond(":zap: Clear! Everything has been removed from the list.")
+                  msg.say(":zap: Clear! Everything has been removed from the list.")
                 }
               })
           }
@@ -314,6 +356,8 @@ slapp.command('/grocery', 'clear', (msg, text) => {
     } catch (err) {
       msg.respond("Something went wrong. We couldn't clear the grocery list :triumph:")
     }
+  } else {
+    msg.respond('Okay, we won\'t clear the list. We promise. :relieved:')
   }
 })
 
