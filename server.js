@@ -1,5 +1,3 @@
-'use strict'
-
 const express = require('express')
 const sqlite = require('sqlite3').verbose()
 let db = new sqlite.Database('./data/database.sqlite')
@@ -19,18 +17,22 @@ let slapp = Slapp({
 })
 
 let _items = null
-fetchList()
-  .then((response) => {
-    if(!response.error) {
-      _items = response.items
-    }
-  })
+updateLocalList()
 
 
 
 //*********************************************
 // Database
 //*********************************************
+
+function updateLocalList() {
+  fetchList()
+    .then((response) => {
+      if(!response.error) {
+        _items = response.items
+      }
+    })
+}
 
 function fetchList() {
   return new Promise((resolve, reject) => {
@@ -55,12 +57,12 @@ function fetchList() {
   })
 }
 
-function addToList(text) {
+function addToList(text, user) {
   return new Promise((resolve, reject) => {
     db = new sqlite.Database('./data/database.sqlite')
     db.serialize(() => {
-      let stmt = db.prepare("INSERT INTO Items (name) VALUES (?)")
-      stmt.run(text, function(err) {
+      let stmt = db.prepare("INSERT INTO Items (name,user) VALUES (?,?)")
+      stmt.run([text, user], function(err) {
         if (err) {
           console.log(err)
           let responseObj = {
@@ -72,6 +74,7 @@ function addToList(text) {
             'item': this
           }
           resolve(responseObj)
+          updateLocalList()
         }
       })
       stmt.finalize()
@@ -97,6 +100,7 @@ function deleteFromList(id) {
             'item': this
           }
           resolve(responseObj)
+          updateLocalList()
         }
       })
       stmt.finalize()
@@ -122,6 +126,7 @@ function updateItem(id, val) {
             'item': this
           }
           resolve(responseObj)
+          updateLocalList()
         }
       })
       stmt.finalize()
@@ -147,6 +152,7 @@ function clearList() {
             'response': this
           }
           resolve(responseObj)
+          _items = null
         }
       })
       stmt.finalize()
@@ -159,7 +165,7 @@ function createList() {
   return new Promise((resolve, reject) => {
     db = new sqlite.Database('./data/database.sqlite')
     db.serialize(() => {
-      let stmt = db.prepare("CREATE TABLE `Items` ( `id` INTEGER PRIMARY KEY AUTOINCREMENT UNIQUE, `name` TEXT );")
+      let stmt = db.prepare("CREATE TABLE `Items` ( `id` INTEGER PRIMARY KEY AUTOINCREMENT UNIQUE, `name` TEXT, `user` TEXT );")
       stmt.run(function(err) {
         if (err) {
           console.log(err)
@@ -172,6 +178,7 @@ function createList() {
             'response': this
           }
           resolve(responseObj)
+          _items = null
         }
       })
       stmt.finalize()
@@ -190,7 +197,7 @@ slapp.command('/lunch', 'help', (msg) => {
   \`help\` - to see this message.
   \`list\` - to see all items on the lunch list.
   \`add [item]\` - to add an item to the list.
-  \`edit [id] new [item]\` - to edit an item on the list.
+  \`edit [id] [new text]\` - to edit an item on the list.
   \`remove [id]\` - to remove an item from the list.
   \`clear\` - to remove all items from the list and start from scratch.
   `
@@ -217,9 +224,9 @@ slapp.command('/lunch', 'list', (msg) => {
               items_text = `:point_down: *Here's the lunch list:*`
             }
             items_text += `
-:white_circle: *` + items[i].id + `* - ` + items[i].name
+:white_circle: *` + items[i].id + `* - @` + items[i].user + ` - ` + items[i].name
           }
-          msg.respond(items_text)
+          msg.say(items_text)
         }
       })
   } catch (err) {
@@ -233,7 +240,8 @@ slapp.command('/lunch', 'add (.*)', (msg, text, item) => {
     msg.respond("Whoops. Try again.")
   } else {
     try {
-      addToList(item)
+      let user = msg.body.user_name
+      addToList(item, user)
         .then((response) => {
           if(response.error) {
             console.log(response.error)
@@ -266,10 +274,11 @@ slapp.command('/lunch', 'remove (.*)', (msg, text, id) => {
       attachments: [
         {
           text: `Are you sure? This will remove "${toBeRemovedItem}" from the list.`,
+          color: "#FF0000",
           fallback: 'Delete or Cancel?',
           callback_id: 'delete_item_callback',
           actions: [
-            { name: 'answer', text: 'Delete', type: 'button', value: id },
+            { name: 'answer', text: 'Delete', type: 'button', value: id, style:'danger' },
             { name: 'answer', text: 'Cancel',  type: 'button',  value: 'cancel' }
           ]
         }]
@@ -311,10 +320,11 @@ slapp.command('/lunch', 'clear', (msg, text) => {
       attachments: [
         {
           text: 'Are you sure? This will delete all items on your list.',
+          color: "#FF0000",
           fallback: 'Delete or Cancel?',
           callback_id: 'clear_list_callback',
           actions: [
-            { name: 'answer', text: 'Delete', type: 'button', value: 'delete' },
+            { name: 'answer', text: 'Delete', type: 'button', value: 'delete', style:'danger' },
             { name: 'answer', text: 'Cancel',  type: 'button',  value: 'cancel' }
           ]
         }]
@@ -361,7 +371,7 @@ slapp.action('clear_list_callback', 'answer', (msg, value) => {
                   console.log(response.error)
                   msg.respond("Bzzz... Something went wrong :face_with_head_bandage: :computer: :fire:")
                 } else {
-                  msg.say(":zap: Clear! Everything has been removed from the list.")
+                  msg.respond(`:zap: Zap! @${msg.body.user.name} cleared the list.`)
                 }
               })
           }
