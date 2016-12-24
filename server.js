@@ -213,7 +213,7 @@ slapp.command('/lunch', 'list', (msg) => {
       .then((response) => {
         if(response.error) {
           console.log(response.error)
-          msg.respond("Bzzz... Something went wrong :face_with_head_bandage: :computer: :fire:")
+          msg.respond("Bzzz... Something went wrong :robot_face: :fire:")
         } else {
           items = response.items
           if(items.length == 0) {
@@ -224,13 +224,13 @@ slapp.command('/lunch', 'list', (msg) => {
               items_text = `:point_down: *Here's the lunch list:*`
             }
             items_text += `
-:white_circle: *` + items[i].id + `* - @` + items[i].user + ` - ` + items[i].name
+:white_circle:*` + items[i].id + `* - :writing_hand: ` + items[i].user + ` - :fork_and_knife: ` + items[i].name
           }
-          msg.say(items_text)
+          msg.respond(items_text)
         }
       })
   } catch (err) {
-    msg.respond("Bzzz... Something went wrong :face_with_head_bandage: :computer: :fire:")
+    msg.respond("Bzzz... Something went wrong :robot_face: :fire:")
     next(err)
   }
 })
@@ -251,7 +251,7 @@ slapp.command('/lunch', 'add (.*)', (msg, text, item) => {
           }
         })
     } catch (err) {
-      msg.respond("Bzzz... Something went wrong :face_with_head_bandage: :computer: :fire:")
+      msg.respond("Bzzz... Something went wrong :robot_face: :fire:")
       next(err)
     }
   }
@@ -300,13 +300,13 @@ slapp.command('/lunch', 'edit (.*)', (msg, text, details) => {
         .then((response) => {
           if(response.error) {
             console.log(response.error)
-            msg.respond("Bzzz... Something went wrong :face_with_head_bandage: :computer: :fire:")
+            msg.respond("Bzzz... Something went wrong :robot_face: :fire:")
           } else {
             msg.respond(":floppy_disk: Changes have been saved!")
           }
         })
     } catch (err) {
-      msg.respond("Bzzz... Something went wrong :face_with_head_bandage: :computer: :fire:")
+      msg.respond("Bzzz... Something went wrong :robot_face: :fire:")
     }
   }
 })
@@ -315,20 +315,24 @@ slapp.command('/lunch', 'clear', (msg, text) => {
   if (!text) {
     msg.respond("Whoops. Try again.")
   } else {
-    msg.respond({
-      text: '',
-      attachments: [
-        {
-          text: 'Are you sure? This will delete all items on your list.',
-          color: "#FF0000",
-          fallback: 'Delete or Cancel?',
-          callback_id: 'clear_list_callback',
-          actions: [
-            { name: 'answer', text: 'Delete', type: 'button', value: 'delete', style:'danger' },
-            { name: 'answer', text: 'Cancel',  type: 'button',  value: 'cancel' }
-          ]
-        }]
-      })
+    if(_items.length > 0) {
+      msg.respond({
+        text: '',
+        attachments: [
+          {
+            text: 'Are you sure? This will delete all items on the list.',
+            color: "#FF0000",
+            fallback: 'Delete or Cancel?',
+            callback_id: 'clear_list_callback',
+            actions: [
+              { name: 'answer', text: 'Delete', type: 'button', value: 'delete', style:'danger' },
+              { name: 'answer', text: 'Cancel',  type: 'button',  value: 'cancel' }
+            ]
+          }]
+        })
+    } else {
+      msg.respond("The list is already empty.")
+    }
   }
 })
 
@@ -343,13 +347,13 @@ slapp.action('delete_item_callback', 'answer', (msg, value) => {
         .then((response) => {
           if(response.error) {
             console.log(response.error)
-            msg.respond("Bzzz... Something went wrong :face_with_head_bandage: :computer: :fire:")
+            msg.respond("Bzzz... Something went wrong :robot_face: :fire:")
           } else {
             msg.respond(":x: Done! I've removed it from the list.")
           }
         })
     } catch (err) {
-      msg.respond("Bzzz... Something went wrong :face_with_head_bandage: :computer: :fire:")
+      msg.respond("Bzzz... Something went wrong :robot_face: :fire:")
     }
   } else {
     msg.respond('Okay, I won\'t delete that. Relax! :relaxed:')
@@ -363,13 +367,13 @@ slapp.action('clear_list_callback', 'answer', (msg, value) => {
         .then((response) => {
           if(response.error) {
             console.log(response.error)
-            msg.respond("Bzzz... Something went wrong :face_with_head_bandage: :computer: :fire:")
+            msg.respond("Bzzz... Something went wrong :robot_face: :fire:")
           } else {
             createList()
               .then((response) => {
                 if(response.error) {
                   console.log(response.error)
-                  msg.respond("Bzzz... Something went wrong :face_with_head_bandage: :computer: :fire:")
+                  msg.respond("Bzzz... Something went wrong :robot_face: :fire:")
                 } else {
                   msg.respond(`:zap: Zap! @${msg.body.user.name} cleared the list.`)
                 }
@@ -377,7 +381,7 @@ slapp.action('clear_list_callback', 'answer', (msg, value) => {
           }
         })
     } catch (err) {
-      msg.respond("Bzzz... Something went wrong :face_with_head_bandage: :computer: :fire:")
+      msg.respond("Bzzz... Something went wrong :robot_face: :fire:")
     }
   } else {
     msg.respond('Okay, I won\'t clear the list. I promise. :relieved:')
